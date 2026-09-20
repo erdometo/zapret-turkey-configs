@@ -1,0 +1,6 @@
+*.log
+*.tmp
+*.bak
+*.swp
+desktop.ini
+Thumbs.db

@@ -1,0 +1,13 @@
+[Unit]
+Description=Zapret Superonline DPI Bypass Daemon (nfqws)
+After=network.target network-online.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/zapret-superonline-start
+ExecStop=/usr/local/bin/zapret-superonline-stop
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
