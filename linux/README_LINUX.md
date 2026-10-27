@@ -1,14 +1,14 @@
 # Linux Usage Guide
 
-Zapret operates on Linux via **`nfqws`** (Netfilter Queue Web Surrogate) interacting with Netfilter (`iptables` or `nftables`).
+Zapret operates on Linux via **`nfqws`** (Netfilter Queue Web Surrogate) interacting with Netfilter (`iptables` / `ip6tables`).
 
 ## Prerequisites
 Ensure `iptables` and `libnetfilter-queue` are installed:
-* **Debian/Ubuntu:** `sudo apt install iptables libnetfilter-queue1`
+* **Debian / Ubuntu:** `sudo apt install iptables libnetfilter-queue1`
 * **Arch Linux:** `sudo pacman -S iptables libnetfilter_queue`
-* **Fedora:** `sudo dnf install iptables libnetfilter_queue`
+* **Fedora / RHEL:** `sudo dnf install iptables libnetfilter_queue`
 
-Install Zapret binaries from the official repository or package:
+Build or install Zapret binaries:
 ```bash
 git clone --depth=1 https://github.com/bol-van/zapret.git /opt/zapret
 make -C /opt/zapret/nfqws
@@ -26,12 +26,16 @@ To stop:
 sudo ./stop_superonline.sh
 ```
 
-## Running as Systemd Service
+## Running as a Persistent Systemd Service
 ```bash
+cd linux
 sudo ./install_systemd.sh
 ```
-Manage the service:
+Manage service:
 ```bash
 sudo systemctl status zapret-superonline.service
 sudo systemctl stop zapret-superonline.service
 ```
+
+## Upstream Updates
+Run `sudo ./update_zapret.sh` to fetch the latest commits from upstream `bol-van/zapret` and rebuild `nfqws`.

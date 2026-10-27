@@ -10,8 +10,8 @@ if %errorlevel% neq 0 (
 )
 
 echo Restarting Zapret Service...
-net stop zapret
+net stop zapret >nul 2>&1
 taskkill /IM winws.exe /F >nul 2>&1
 net start zapret
-echo [SUCCESS] Zapret restarted.
+echo [SUCCESS] Zapret service restarted.
 timeout /t 3 >nul

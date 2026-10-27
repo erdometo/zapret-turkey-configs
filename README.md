@@ -15,10 +15,11 @@ In Turkey, major ISPs (especially **Turkcell Superonline** on fiber and VDSL net
 
 ### Why Conventional Tools Fail on Modern Superonline:
 1. **TCP Stream Reassembly:** Older tools like standard GoodbyeDPI split TLS `ClientHello` packets across simple TCP fragments. Modern Superonline DPI buffers and reassembles fragmented TCP streams before parsing the SNI, subsequently firing forged `TCP RST` packets (`curl error 35: Recv failure: Connection reset by peer`).
-2. **DPI Hop Distance & Sequence Immunity:** Superonline's middleboxes ignore generic TCP sequence desynchronization tricks (e.g. `badseq` or `autottl=2`). Fake packets must be tuned to match the exact hop boundary of the ISP core.
-3. **The Solution:** 
-   * **`TTL=6` Strategy:** Fake handshakes are sent with a Time-To-Live of 6. The fake packet poisons the DPI state table at the Hop 6 boundary, decrements to TTL=0, and expires *before* reaching the destination server. The real TLS handshake then passes through unimpeded.
-   * **`multidisorder` Strategy:** Alternatively, the genuine `ClientHello` is split with sequence number overlapping (`seqovl=1`), blinding the DPI reassembly engine without generating any fake packets.
+2. **The Fragility of TTL Hops:** Fake packet desynchronization (e.g. `TTL=6`) relies on the packet expiring exactly at the ISP middlebox. If your home network adds an extra hop (connecting through a Wi-Fi repeater, mesh node, or secondary router), the fake packet dies prematurely, causing connection drops.
+3. **The Robust Solution (MultiDisorder):**
+   * **`MultiDisorder` Strategy (Recommended & Default):** Splits the genuine `ClientHello` with a 1-byte sequence number overlap (`split-seqovl=1`). This blinds the DPI reassembly engine without generating synthetic fake packets and is **100% immune to local router/hop count changes**.
+   * **QUIC / HTTP/3 Protection:** Desynchronizes UDP Port 443 `Initial` packets so modern browsers using HTTP/3 do not leak domain names over UDP.
+   * **Discord Voice / STUN Support:** Handles UDP signaling and media streams, resolving "RTC Connecting" voice channel stalls.
 
 ---
 
@@ -26,26 +27,26 @@ In Turkey, major ISPs (especially **Turkcell Superonline** on fiber and VDSL net
 
 ### Windows
 
-#### Option A: Interactive Run (Testing)
+#### 1. Interactive Run (Testing)
 1. Download this repository (**Code -> Download ZIP**) and extract it.
 2. Open the `windows` folder.
-3. Double-click **`1_START_SUPERONLINE_TTL6.cmd`** (approve the UAC elevation prompt).
+3. Double-click **`1_START_SUPERONLINE.cmd`** (approve the UAC elevation prompt).
 4. Keep the console window open while browsing. To stop, close the window or run **`4_STOP_ZAPRET.cmd`**.
 
-#### Option B: Automatic Background Service (Recommended)
+#### 2. Automatic Background Service (Recommended)
 1. Open the `windows` folder.
 2. Double-click **`2_INSTALL_SERVICE.cmd`**.
 3. Zapret will now run silently as a native Windows service in the background on every PC boot—no open command prompt windows needed!
 4. To remove the service anytime, run **`3_UNINSTALL_SERVICE.cmd`**.
 
-#### Option C: Keeping Core Binaries Updated
-* Double-click **`update_zapret.cmd`** in the `windows` folder. It queries GitHub for the latest upstream `bol-van/zapret` release, automatically updates `winws.exe` and `WinDivert` drivers, and keeps your Superonline configs intact.
+#### 3. Keeping Core Binaries Updated
+* Double-click **`update_zapret.cmd`** in the `windows` folder. It queries GitHub for the latest upstream `bol-van/zapret` release, automatically updates `winws.exe` and `WinDivert` drivers, and keeps your configurations intact.
 
 ---
 
 ### Linux
 
-Linux operates via **`nfqws`** (Netfilter Queue Web Surrogate) interacting with `iptables` or `nftables`.
+Linux operates via **`nfqws`** (Netfilter Queue Web Surrogate) interacting with `iptables` / `ip6tables`.
 
 #### 1. Prerequisites
 Ensure `iptables` and `libnetfilter-queue` are installed:
@@ -94,9 +95,10 @@ sudo systemctl stop zapret-superonline.service
 
 | Traffic Type | Strategy & Parameters | Impact / Notes |
 | :--- | :--- | :--- |
-| **HTTPS (TCP 443)** | `--dpi-desync=fake --dpi-desync-ttl=6 --dpi-desync-repeats=2` | Primary strategy discovered and verified via `blockcheck` |
-| **HTTPS Fallback** | `--dpi-desync=multidisorder --dpi-desync-split-pos=2,midsld --dpi-desync-split-seqovl=1` | Sequence overlap desync; requires zero fake packets |
-| **HTTP (TCP 80)** | `--dpi-desync=fake,fakedsplit --dpi-desync-ttl=6` | Standard HTTP host header desync |
+| **HTTPS (TCP 443) Primary** | `--dpi-desync=multidisorder --dpi-desync-split-pos=2,midsld --dpi-desync-split-seqovl=1` | **Hop-Immune** sequence overlap; zero fake packets |
+| **HTTPS (TCP 443) Fallback**| `--dpi-desync=fake --dpi-desync-ttl=6 --dpi-desync-repeats=2` | Calibrated TTL fake packet strategy (requires direct modem hop) |
+| **HTTP (TCP 80)** | `--dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig` | Standard HTTP host header desync |
+| **QUIC / HTTP3 (UDP 443)** | `--filter-l7=quic --dpi-desync=fake --dpi-desync-repeats=11` | Intercepts UDP 443 `Initial` packets to protect HTTP/3 |
 | **Discord / STUN** | `--filter-l7=discord,stun --dpi-desync=fake` | Bypasses UDP voice channel (RTC) blocking |
 
 ---
@@ -111,7 +113,7 @@ DPI desynchronization tools resolve packet inspection and TCP resets, but they d
 
 ## 📚 Technical Documentation
 
-* [Technical Analysis & Superonline Hop Diagnostics](docs/TECHNICAL_ANALYSIS.md)
+* [Technical Analysis & Hop Evasion Diagnostics](docs/TECHNICAL_ANALYSIS.md)
 * [Sanitized Blockcheck Benchmark & Results Matrix](docs/BENCHMARK_AND_TESTS.md)
 * [Windows Usage Guide](windows/README_WINDOWS.md)
 * [Linux Usage Guide](linux/README_LINUX.md)
